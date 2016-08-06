@@ -3,7 +3,15 @@ language: go
 go:
 - 1.6.3
 script:
-- go test ./...
+- go build ./...
+- go test -cover . ./tls
+- |
+  echo "checking gofmt..."
+  fmtRes=$(gofmt -l .)
+  if [ -n "${fmtRes}" ]; then
+  	echo -e "gofmt checking failed:\n${fmtRes}"
+  	exit 255
+  fi
 notifications:
   email: false
   slack:
