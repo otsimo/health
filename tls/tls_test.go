@@ -7,9 +7,11 @@ import (
 	"crypto/x509/pkix"
 	"encoding/pem"
 	"errors"
+	"io/ioutil"
 	"math"
 	"math/big"
 	"net"
+	"os"
 	"testing"
 	"time"
 )
@@ -37,7 +39,21 @@ type AltNames struct {
 func NewPrivateKey() (*rsa.PrivateKey, error) {
 	return rsa.GenerateKey(rand.Reader, RSAKeySize)
 }
+func EncodePrivateKeyPEM(key *rsa.PrivateKey) []byte {
+	block := pem.Block{
+		Type:  "RSA PRIVATE KEY",
+		Bytes: x509.MarshalPKCS1PrivateKey(key),
+	}
+	return pem.EncodeToMemory(&block)
+}
 
+func EncodeCertificatePEM(cert *x509.Certificate) []byte {
+	block := pem.Block{
+		Type:  "CERTIFICATE",
+		Bytes: cert.Raw,
+	}
+	return pem.EncodeToMemory(&block)
+}
 func NewSelfSignedCACertificate(cfg CertConfig, key *rsa.PrivateKey, startDate time.Time, validDuration time.Duration) (*x509.Certificate, error) {
 	dur := Duration365d * 10
 	if validDuration != 0 {
@@ -111,7 +127,7 @@ func NewSignedCertificate(cfg CertConfig, key *rsa.PrivateKey, caCert *x509.Cert
 	return x509.ParseCertificate(certDERBytes)
 }
 
-func NewTestCert(startTime time.Time, validDuration time.Duration) (*x509.Certificate, error) {
+func NewTestCert(startTime time.Time, validDuration time.Duration) (*x509.Certificate, *rsa.PrivateKey, error) {
 	cfg := CertConfig{
 		CommonName:   "test",
 		Organization: []string{"Otsimo"},
@@ -119,17 +135,49 @@ func NewTestCert(startTime time.Time, validDuration time.Duration) (*x509.Certif
 	}
 	pkca, err := NewPrivateKey()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	ca, err := NewSelfSignedCACertificate(cfg, pkca, startTime, Duration365d)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	pk, err := NewPrivateKey()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return NewSignedCertificate(cfg, pk, ca, pkca, startTime, validDuration)
+	sc, err := NewSignedCertificate(cfg, pk, ca, pkca, startTime, validDuration)
+	if err != nil {
+		return nil, nil, err
+	}
+	return sc, pk, nil
+}
+
+func CreateTestCert(dir string, startTime time.Time, validDuration time.Duration) (string, string, error) {
+	c, pk, err := NewTestCert(startTime, validDuration)
+	if err != nil {
+		return "", "", err
+	}
+	crtfile, err := ioutil.TempFile(dir, "test-cert.pem")
+	if err != nil {
+		return "", "", err
+	}
+	if _, err := crtfile.Write(EncodeCertificatePEM(c)); err != nil {
+		return "", "", err
+	}
+	if err := crtfile.Close(); err != nil {
+		return "", "", err
+	}
+	keyfile, err := ioutil.TempFile(dir, "test-key.pem")
+	if err != nil {
+		return "", "", err
+	}
+	if _, err := keyfile.Write(EncodePrivateKeyPEM(pk)); err != nil {
+		return "", "", err
+	}
+	if err := keyfile.Close(); err != nil {
+		return "", "", err
+	}
+	return crtfile.Name(), keyfile.Name(), nil
 }
 
 func TestInvalidCert(t *testing.T) {
@@ -143,7 +191,7 @@ func TestNotBefore(t *testing.T) {
 	d := time.Hour * 24
 	now := time.Now()
 	start := now.Add(d)
-	c, err := NewTestCert(start, d)
+	c, _, err := NewTestCert(start, d)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -156,7 +204,7 @@ func TestNotBefore(t *testing.T) {
 func TestNotAfter(t *testing.T) {
 	d := time.Hour * 24 * 7 //one week
 	now := time.Now()
-	c, err := NewTestCert(now, d)
+	c, _, err := NewTestCert(now, d)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -167,5 +215,29 @@ func TestNotAfter(t *testing.T) {
 	checker2 := NewWithCert(c, time.Hour*24*3)
 	if err := checker2.Healthy(); err != nil {
 		t.Fatalf("want='%v' got='%v'", nil, err)
+	}
+}
+
+func TestReadingCertificate(t *testing.T) {
+	d := time.Hour * 24 * 7 //one week
+	now := time.Now()
+	c, k, err := CreateTestCert("", now, d)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(c) // clean up cert
+	defer os.Remove(k) // clean up key
+
+	checker := New(c, k, time.Hour*24*8)
+	if err := checker.Healthy(); err != shortLifeError {
+		t.Fatalf("want='%v' got='%v'", shortLifeError, err)
+	}
+	checker2 := New(c, k, time.Hour*24*3)
+	if err := checker2.Healthy(); err != nil {
+		t.Fatalf("want='%v' got='%v'", nil, err)
+	}
+	checker3 := New("asd", "asdasf", time.Hour*24*3)
+	if err := checker3.Healthy(); err != notFoundError {
+		t.Fatalf("want='%v' got='%v'", notFoundError, err)
 	}
 }

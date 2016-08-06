@@ -39,7 +39,11 @@ func New(certFile, keyFile string, d time.Duration) *TLSHealthChecker {
 	if err != nil {
 		return &TLSHealthChecker{cert: nil}
 	}
-	return &TLSHealthChecker{cert: c.Leaf, dur: d}
+	if len(c.Certificate) > 0 {
+		c1, _ := x509.ParseCertificate(c.Certificate[0])
+		return &TLSHealthChecker{cert: c1, dur: d}
+	}
+	return &TLSHealthChecker{cert: nil}
 }
 
 // NewWithCert returns TLSHealthChecker
