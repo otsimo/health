@@ -147,7 +147,7 @@ func TestNotBefore(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	checker:=NewWithCert(c, time.Hour*6)
+	checker := NewWithCert(c, time.Hour*6)
 	if err := checker.Healthy(); err != notStartedError {
 		t.Fatalf("want='%v' got='%v'", notStartedError, err)
 	}
