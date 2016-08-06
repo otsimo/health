@@ -1,11 +1,12 @@
 package health
 
 import (
+	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
-	"fmt"
-	"encoding/json"
 )
+
 // This file copied from github.com/coreos/pkg
 
 const (
@@ -20,7 +21,7 @@ type Checkable interface {
 // Checker provides a way to make an endpoint which can be probed for system health.
 type Checker struct {
 	// Checks are the Checkables to be checked when probing.
-	Checks           []Checkable
+	Checks []Checkable
 
 	// Unhealthyhandler is called when one or more of the checks are unhealthy.
 	// If not provided DefaultUnhealthyHandler is called.
@@ -28,7 +29,7 @@ type Checker struct {
 
 	// HealthyHandler is called when all checks are healthy.
 	// If not provided, DefaultHealthyHandler is called.
-	HealthyHandler   http.HandlerFunc
+	HealthyHandler http.HandlerFunc
 }
 
 func (c Checker) ServeHTTP(w http.ResponseWriter, r *http.Request) {
