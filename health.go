@@ -18,6 +18,14 @@ type Checkable interface {
 	Healthy() error
 }
 
+func New(checks ...Checkable) *Checker {
+	return &Checker{
+		Checks:           checks,
+		UnhealthyHandler: DefaultUnhealthyHandler,
+		HealthyHandler:   DefaultHealthyHandler,
+	}
+}
+
 // Checker provides a way to make an endpoint which can be probed for system health.
 type Checker struct {
 	// Checks are the Checkables to be checked when probing.
