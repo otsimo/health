@@ -122,6 +122,7 @@ func DefaultHealthyHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func DefaultUnhealthyHandler(w http.ResponseWriter, r *http.Request, err error) {
+	log.Printf("health check failed: %v", err)
 	writeErr := writeJSONResponse(w, http.StatusInternalServerError, StatusResponse{
 		Status: "error",
 		Details: &StatusResponseDetails{
