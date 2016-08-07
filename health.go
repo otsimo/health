@@ -1,12 +1,12 @@
 package health
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 
+	"golang.org/x/net/context"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 )
 
