@@ -82,7 +82,7 @@ func (c Checker) Check(ctx context.Context, in *healthpb.HealthCheckRequest) (*h
 	}, nil
 }
 
-func (c Checker) Watch(in *healthpb.HealthCheckRequest, svc *healthpb.Health_WatchServer) error {
+func (c Checker) Watch(in *healthpb.HealthCheckRequest, svc healthpb.Health_WatchServer) error {
 	return status.Errorf(codes.Unimplemented, "Unimplemented")
 }
 
