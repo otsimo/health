@@ -7,7 +7,9 @@ import (
 	"net/http"
 
 	"golang.org/x/net/context"
+	"google.golang.org/grpc/codes"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
+	"google.golang.org/grpc/status"
 )
 
 // This file copied from github.com/coreos/pkg
@@ -78,6 +80,10 @@ func (c Checker) Check(ctx context.Context, in *healthpb.HealthCheckRequest) (*h
 	return &healthpb.HealthCheckResponse{
 		Status: healthpb.HealthCheckResponse_SERVING,
 	}, nil
+}
+
+func (c Checker) Watch(in *healthpb.HealthCheckRequest, svc *healthpb.Health_WatchServer) error {
+	return status.Errorf(codes.Unimplemented, "Unimplemented")
 }
 
 type UnhealthyHandler func(w http.ResponseWriter, r *http.Request, err error)
