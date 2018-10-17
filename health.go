@@ -18,7 +18,7 @@ const (
 	JSONContentType = "application/json"
 )
 
-// Checkables should return nil when the thing they are checking is healthy, and an error otherwise.
+// Checkable should return nil when the thing they are checking is healthy, and an error otherwise.
 type Checkable interface {
 	Healthy() error
 }
