@@ -1,12 +1,12 @@
 package health
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 
-	"golang.org/x/net/context"
 	"google.golang.org/grpc/codes"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/status"
@@ -33,6 +33,7 @@ func New(checks ...Checkable) *Checker {
 
 // Checker provides a way to make an endpoint which can be probed for system health.
 type Checker struct {
+	healthpb.UnimplementedHealthServer
 	// Checks are the Checkables to be checked when probing.
 	Checks []Checkable
 
@@ -84,6 +85,9 @@ func (c Checker) Check(ctx context.Context, in *healthpb.HealthCheckRequest) (*h
 
 func (c Checker) Watch(in *healthpb.HealthCheckRequest, svc healthpb.Health_WatchServer) error {
 	return status.Errorf(codes.Unimplemented, "Unimplemented")
+}
+func (c Checker) List(context.Context, *healthpb.HealthListRequest) (*healthpb.HealthListResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method List not implemented")
 }
 
 type UnhealthyHandler func(w http.ResponseWriter, r *http.Request, err error)
